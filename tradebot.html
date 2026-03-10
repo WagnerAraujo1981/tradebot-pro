@@ -1,0 +1,1103 @@
+
+ <!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeBot Pro - Sistema de Trading Automático</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .bot-card {
+            transition: all 0.3s ease;
+        }
+        
+        .bot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .status-online {
+            background: #10b981;
+        }
+        
+        .status-offline {
+            background: #ef4444;
+        }
+        
+        .crypto-icon {
+            font-size: 2rem;
+            margin-right: 0.5rem;
+        }
+        
+        .trading-pair {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 50;
+                flex-direction: row;
+                justify-content: space-around;
+                padding: 0.5rem;
+            }
+            
+            .main-content {
+                margin-bottom: 80px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Mobile Header -->
+    <div class="lg:hidden bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-40">
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-robot text-2xl text-indigo-600"></i>
+            <span class="text-xl font-bold text-indigo-600">TradeBot Pro</span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <div class="text-right">
+                <div class="text-xs text-gray-500">Saldo Total</div>
+                <div class="font-bold text-green-600" id="mobileBalance">R$ 50.000,00</div>
+            </div>
+            <img src="https://ui-avatars.com/api/?name=User&background=random" class="w-10 h-10 rounded-full">
+        </div>
+    </div>
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="sidebar bg-indigo-900 text-white w-64 flex-shrink-0 hidden lg:flex flex-col">
+            <div class="p-6 border-b border-indigo-800">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-robot text-3xl"></i>
+                    <div>
+                        <h1 class="text-xl font-bold">TradeBot Pro</h1>
+                        <p class="text-xs text-indigo-300">v2.0 Automático</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="flex-1 p-4 space-y-2">
+                <button onclick="showSection('dashboard')" class="nav-btn w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-indigo-800 transition bg-indigo-800">
+                    <i class="fas fa-chart-line w-5"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button onclick="showSection('bots')" class="nav-btn w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-indigo-800 transition">
+                    <i class="fas fa-robot w-5"></i>
+                    <span>Meus Robôs</span>
+                    <span class="ml-auto bg-green-500 text-xs px-2 py-1 rounded-full" id="activeBotsCount">3</span>
+                </button>
+                <button onclick="showSection('markets')" class="nav-btn w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-indigo-800 transition">
+                    <i class="fas fa-globe w-5"></i>
+                    <span>Mercados</span>
+                </button>
+                <button onclick="showSection('strategies')" class="nav-btn w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-indigo-800 transition">
+                    <i class="fas fa-brain w-5"></i>
+                    <span>Estratégias</span>
+                </button>
+                <button onclick="showSection('history')" class="nav-btn w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-indigo-800 transition">
+                    <i class="fas fa-history w-5"></i>
+                    <span>Histórico</span>
+                </button>
+                <button onclick="showSection('settings')" class="nav-btn w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-indigo-800 transition">
+                    <i class="fas fa-cog w-5"></i>
+                    <span>Configurações</span>
+                </button>
+            </nav>
+            
+            <div class="p-4 border-t border-indigo-800">
+                <div class="glass-effect rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm text-indigo-200">Status do Sistema</span>
+                        <div class="flex items-center space-x-1">
+                            <div class="w-2 h-2 bg-green-400 rounded-full pulse-dot"></div>
+                            <span class="text-xs text-green-400">Online</span>
+                        </div>
+                    </div>
+                    <div class="text-xs text-indigo-300">
+                        Última sincronização: <span id="lastSync">Agora</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Bottom Navigation -->
+        <nav class="sidebar lg:hidden bg-indigo-900 text-white fixed bottom-0 left-0 right-0 flex justify-around p-2 z-50">
+            <button onclick="showSection('dashboard')" class="flex flex-col items-center p-2 text-indigo-300 hover:text-white">
+                <i class="fas fa-chart-line text-xl"></i>
+                <span class="text-xs mt-1">Dashboard</span>
+            </button>
+            <button onclick="showSection('bots')" class="flex flex-col items-center p-2 text-indigo-300 hover:text-white">
+                <i class="fas fa-robot text-xl"></i>
+                <span class="text-xs mt-1">Robôs</span>
+            </button>
+            <button onclick="showSection('markets')" class="flex flex-col items-center p-2 text-indigo-300 hover:text-white">
+                <i class="fas fa-globe text-xl"></i>
+                <span class="text-xs mt-1">Mercados</span>
+            </button>
+            <button onclick="showSection('settings')" class="flex flex-col items-center p-2 text-indigo-300 hover:text-white">
+                <i class="fas fa-cog text-xl"></i>
+                <span class="text-xs mt-1">Ajustes</span>
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content flex-1 overflow-auto">
+            
+            <!-- DASHBOARD SECTION -->
+            <section id="dashboard" class="p-4 lg:p-8 slide-in">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Dashboard</h2>
+                        <p class="text-gray-500">Visão geral dos seus investimentos automáticos</p>
+                    </div>
+                    <button onclick="quickStart()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition flex items-center space-x-2">
+                        <i class="fas fa-play"></i>
+                        <span>Quick Start</span>
+                    </button>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-indigo-500">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-500 text-sm">Saldo Total</p>
+                                <h3 class="text-2xl font-bold text-gray-800 mt-1" id="totalBalance">R$ 50.000,00</h3>
+                                <p class="text-green-500 text-sm mt-1"><i class="fas fa-arrow-up"></i> +12.5% este mês</p>
+                            </div>
+                            <div class="bg-indigo-100 p-3 rounded-lg">
+                                <i class="fas fa-wallet text-indigo-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-500 text-sm">Lucro Hoje</p>
+                                <h3 class="text-2xl font-bold text-green-600 mt-1" id="todayProfit">+R$ 1.250,00</h3>
+                                <p class="text-green-500 text-sm mt-1"><i class="fas fa-robot"></i> 8 operações</p>
+                            </div>
+                            <div class="bg-green-100 p-3 rounded-lg">
+                                <i class="fas fa-coins text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-500 text-sm">Robôs Ativos</p>
+                                <h3 class="text-2xl font-bold text-gray-800 mt-1" id="activeBots">3/5</h3>
+                                <p class="text-blue-500 text-sm mt-1"><i class="fas fa-sync"></i> Automático</p>
+                            </div>
+                            <div class="bg-blue-100 p-3 rounded-lg">
+                                <i class="fas fa-robot text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-gray-500 text-sm">Taxa de Acerto</p>
+                                <h3 class="text-2xl font-bold text-gray-800 mt-1">87.3%</h3>
+                                <p class="text-purple-500 text-sm mt-1"><i class="fas fa-target"></i> Meta: 85%</p>
+                            </div>
+                            <div class="bg-purple-100 p-3 rounded-lg">
+                                <i class="fas fa-bullseye text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-lg font-bold mb-4">Desempenho dos Robôs (7 dias)</h3>
+                        <canvas id="performanceChart" height="250"></canvas>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-lg font-bold mb-4">Alocação por Mercado</h3>
+                        <canvas id="allocationChart" height="250"></canvas>
+                    </div>
+                </div>
+
+                <!-- Live Operations -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">Operações em Tempo Real</h3>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-red-500 rounded-full pulse-dot"></div>
+                            <span class="text-sm text-gray-500">Ao vivo</span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="p-3 text-left">Hora</th>
+                                    <th class="p-3 text-left">Robô</th>
+                                    <th class="p-3 text-left">Par</th>
+                                    <th class="p-3 text-left">Tipo</th>
+                                    <th class="p-3 text-right">Valor</th>
+                                    <th class="p-3 text-right">Resultado</th>
+                                    <th class="p-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="operationsTable">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BOTS SECTION -->
+            <section id="bots" class="p-4 lg:p-8 hidden slide-in">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Meus Robôs de Trading</h2>
+                        <p class="text-gray-500">Gerencie seus robôs automatizados</p>
+                    </div>
+                    <button onclick="createNewBot()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition flex items-center space-x-2">
+                        <i class="fas fa-plus"></i>
+                        <span>Novo Robô</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" id="botsGrid">
+                    <!-- Bot cards will be populated here -->
+                </div>
+            </section>
+
+            <!-- MARKETS SECTION -->
+            <section id="markets" class="p-4 lg:p-8 hidden slide-in">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Seleção de Mercados</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-md p-6 border-2 border-yellow-400 cursor-pointer hover:shadow-lg transition" onclick="selectMarket('crypto')">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="bg-yellow-100 p-3 rounded-lg">
+                                    <i class="fab fa-bitcoin text-yellow-600 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg">Criptomoedas</h3>
+                                    <p class="text-sm text-gray-500">Binance, Coinbase, etc.</p>
+                                </div>
+                            </div>
+                            <i class="fas fa-check-circle text-green-500 text-2xl"></i>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Pares disponíveis:</span>
+                                <span class="font-semibold">150+</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Alavancagem:</span>
+                                <span class="font-semibold">Até 125x</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 border-2 border-blue-400 cursor-pointer hover:shadow-lg transition" onclick="selectMarket('forex')">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="bg-blue-100 p-3 rounded-lg">
+                                    <i class="fas fa-dollar-sign text-blue-600 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg">Forex</h3>
+                                    <p class="text-sm text-gray-500">Mercado de Câmbio</p>
+                                </div>
+                            </div>
+                            <div class="w-6 h-6 border-2 border-gray-300 rounded-full"></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Pares disponíveis:</span>
+                                <span class="font-semibold">80+</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Alavancagem:</span>
+                                <span class="font-semibold">Até 500x</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 border-2 border-green-400 cursor-pointer hover:shadow-lg transition" onclick="selectMarket('stocks')">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="bg-green-100 p-3 rounded-lg">
+                                    <i class="fas fa-chart-bar text-green-600 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg">Ações (B3)</h3>
+                                    <p class="text-sm text-gray-500">Brasil e EUA</p>
+                                </div>
+                            </div>
+                            <div class="w-6 h-6 border-2 border-gray-300 rounded-full"></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Ativos:</span>
+                                <span class="font-semibold">500+</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Day Trade:</span>
+                                <span class="font-semibold">Automático</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-lg font-bold mb-4">Pares de Trading Populares</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" id="tradingPairs">
+                        <!-- Pairs populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- STRATEGIES SECTION -->
+            <section id="strategies" class="p-4 lg:p-8 hidden slide-in">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Estratégias Automáticas</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-indigo-500">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-bold text-lg">Scalping Ultra-Rápido</h3>
+                                <p class="text-sm text-gray-500">Operações de 1-5 minutos</p>
+                            </div>
+                            <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-semibold">Alto Risco</span>
+                        </div>
+                        <p class="text-gray-600 text-sm mb-4">Realiza operações rápidas capturando micro-movimentos do mercado. Ideal para volatilidade alta.</p>
+                        <div class="flex justify-between items-center">
+                            <div class="text-sm">
+                                <span class="text-gray-500">Retorno médio:</span>
+                                <span class="font-bold text-green-600">2-5% ao dia</span>
+                            </div>
+                            <button onclick="activateStrategy('scalping')" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
+                                Ativar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-bold text-lg">Trend Following</h3>
+                                <p class="text-sm text-gray-500">Segue a tendência principal</p>
+                            </div>
+                            <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-semibold">Médio Risco</span>
+                        </div>
+                        <p class="text-gray-600 text-sm mb-4">Identifica e segue tendências de médio prazo usando médias móveis e indicadores de momentum.</p>
+                        <div class="flex justify-between items-center">
+                            <div class="text-sm">
+                                <span class="text-gray-500">Retorno médio:</span>
+                                <span class="font-bold text-green-600">15-25% ao mês</span>
+                            </div>
+                            <button onclick="activateStrategy('trend')" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition">
+                                Ativar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-bold text-lg">Arbitragem</h3>
+                                <p class="text-sm text-gray-500">Diferenças entre exchanges</p>
+                            </div>
+                            <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold">Baixo Risco</span>
+                        </div>
+                        <p class="text-gray-600 text-sm mb-4">Compra em exchange mais barata e vende na mais cara simultaneamente. Risco mínimo.</p>
+                        <div class="flex justify-between items-center">
+                            <div class="text-sm">
+                                <span class="text-gray-500">Retorno médio:</span>
+                                <span class="font-bold text-green-600">0.5-2% ao dia</span>
+                            </div>
+                            <button onclick="activateStrategy('arbitrage')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">
+                                Ativar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-bold text-lg">Grid Trading</h3>
+                                <p class="text-sm text-gray-500">Compra e venda em grades</p>
+                            </div>
+                            <span class="bg-purple-100 text-purple-600 px-3 py-1 rounded-full text-xs font-semibold">Automático</span>
+                        </div>
+                        <p class="text-gray-600 text-sm mb-4">Coloca ordens de compra e venda em intervalos pré-definidos. Lucra com movimentos laterais.</p>
+                        <div class="flex justify-between items-center">
+                            <div class="text-sm">
+                                <span class="text-gray-500">Retorno médio:</span>
+                                <span class="font-bold text-green-600">10-20% ao mês</span>
+                            </div>
+                            <button onclick="activateStrategy('grid')" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition">
+                                Ativar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HISTORY SECTION -->
+            <section id="history" class="p-4 lg:p-8 hidden slide-in">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Histórico de Operações</h2>
+                
+                <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div class="p-4 border-b flex justify-between items-center">
+                        <div class="flex space-x-2">
+                            <button class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold">Todas</button>
+                            <button class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Lucros</button>
+                            <button class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Perdas</button>
+                        </div>
+                        <button class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold">
+                            <i class="fas fa-download mr-2"></i>Exportar CSV
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="p-4 text-left">Data/Hora</th>
+                                    <th class="p-4 text-left">Robô</th>
+                                    <th class="p-4 text-left">Ativo</th>
+                                    <th class="p-4 text-center">Direção</th>
+                                    <th class="p-4 text-right">Entrada</th>
+                                    <th class="p-4 text-right">Saída</th>
+                                    <th class="p-4 text-right">Resultado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTable">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SETTINGS SECTION -->
+            <section id="settings" class="p-4 lg:p-8 hidden slide-in">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Configurações do Sistema</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-lg font-bold mb-4 border-b pb-2">Configurações Gerais</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Moeda Base</label>
+                                <select class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-500">
+                                    <option>BRL (Real Brasileiro)</option>
+                                    <option>USD (Dólar Americano)</option>
+                                    <option>USDT (Tether)</option>
+                                    <option>BTC (Bitcoin)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Limite de Risco por Operação (%)</label>
+                                <input type="range" min="1" max="10" value="2" class="w-full" id="riskSlider" oninput="updateRiskValue(this.value)">
+                                <div class="flex justify-between text-sm text-gray-500 mt-1">
+                                    <span>1%</span>
+                                    <span id="riskValue" class="font-bold text-indigo-600">2%</span>
+                                    <span>10%</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p class="font-medium">Notificações Push</p>
+                                    <p class="text-sm text-gray-500">Alertas de operações e lucros</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" checked class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p class="font-medium">Modo Demo</p>
+                                    <p class="text-sm text-gray-500">Operar com dinheiro virtual</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-lg font-bold mb-4 border-b pb-2">Conexões com Exchanges</h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition cursor-pointer">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                        <i class="fab fa-bitcoin text-yellow-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold">Binance</p>
+                                        <p class="text-xs text-green-500">● Conectado</p>
+                                    </div>
+                                </div>
+                                <button class="text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                            </div>
+
+                            <div class="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition cursor-pointer">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-coins text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold">Coinbase Pro</p>
+                                        <p class="text-xs text-gray-500">○ Desconectado</p>
+                                    </div>
+                                </div>
+                                <button class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold">
+                                    Conectar
+                                </button>
+                            </div>
+
+                            <div class="flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition cursor-pointer">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-chart-line text-green-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold">MetaTrader 5</p>
+                                        <p class="text-xs text-gray-500">○ Desconectado</p>
+                                    </div>
+                                </div>
+                                <button class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold">
+                                    Conectar
+                                </button>
+                            </div>
+
+                            <button class="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-500 hover:border-indigo-500 hover:text-indigo-600 transition">
+                                <i class="fas fa-plus mr-2"></i>Adicionar Nova Exchange
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                    <div class="flex items-start space-x-3">
+                        <i class="fas fa-exclamation-triangle text-yellow-600 mt-1"></i>
+                        <div>
+                            <h4 class="font-bold text-yellow-800">Aviso Importante</h4>
+                            <p class="text-sm text-yellow-700 mt-1">
+                                Trading automático envolve riscos. Configure stop-loss adequados e nunca invista mais do que pode perder. 
+                                O sistema opera 24/7, mas recomendamos monitoramento periódico.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Modal para Novo Robô -->
+    <div id="newBotModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 slide-in">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">Criar Novo Robô</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome do Robô</label>
+                    <input type="text" placeholder="Ex: Bitcoin Scalper" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mercado</label>
+                    <select class="w-full border rounded-lg p-2">
+                        <option>Criptomoedas</option>
+                        <option>Forex</option>
+                        <option>Ações B3</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Par de Trading</label>
+                    <select class="w-full border rounded-lg p-2">
+                        <option>BTC/USDT</option>
+                        <option>ETH/USDT</option>
+                        <option>SOL/USDT</option>
+                        <option>ADA/USDT</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Estratégia</label>
+                    <select class="w-full border rounded-lg p-2">
+                        <option>Scalping Ultra-Rápido</option>
+                        <option>Trend Following</option>
+                        <option>Grid Trading</option>
+                        <option>Arbitragem</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Investimento Inicial</label>
+                    <input type="number" placeholder="1000" class="w-full border rounded-lg p-2">
+                </div>
+                
+                <div class="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                    <input type="checkbox" id="autoStart" checked class="rounded text-indigo-600">
+                    <label for="autoStart" class="text-sm">Iniciar automaticamente após criação</label>
+                </div>
+            </div>
+            
+            <button onclick="confirmCreateBot()" class="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">
+                Criar e Ativar Robô
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Dados simulados
+        const bots = [
+            {
+                id: 1,
+                name: 'Bitcoin Scalper Pro',
+                pair: 'BTC/USDT',
+                strategy: 'Scalping',
+                status: 'active',
+                profit: '+R$ 850,00',
+                profitClass: 'text-green-600',
+                operations: 24,
+                winRate: '91%',
+                icon: 'fab fa-bitcoin',
+                color: 'orange'
+            },
+            {
+                id: 2,
+                name: 'Ethereum Grid',
+                pair: 'ETH/USDT',
+                strategy: 'Grid Trading',
+                status: 'active',
+                profit: '+R$ 320,00',
+                profitClass: 'text-green-600',
+                operations: 156,
+                winRate: '85%',
+                icon: 'fab fa-ethereum',
+                color: 'purple'
+            },
+            {
+                id: 3,
+                name: 'Forex Trend',
+                pair: 'EUR/USD',
+                strategy: 'Trend Following',
+                status: 'paused',
+                profit: '-R$ 45,00',
+                profitClass: 'text-red-600',
+                operations: 8,
+                winRate: '62%',
+                icon: 'fas fa-dollar-sign',
+                color: 'blue'
+            }
+        ];
+
+        const operations = [
+            { time: '14:32:05', bot: 'Bitcoin Scalper Pro', pair: 'BTC/USDT', type: 'Compra', amount: 'R$ 1.200', result: '+R$ 45,00', status: 'completed' },
+            { time: '14:28:12', bot: 'Ethereum Grid', pair: 'ETH/USDT', type: 'Venda', amount: 'R$ 800', result: '+R$ 23,00', status: 'completed' },
+            { time: '14:25:33', bot: 'Bitcoin Scalper Pro', pair: 'BTC/USDT', type: 'Venda', amount: 'R$ 1.200', result: '+R$ 38,00', status: 'completed' },
+            { time: '14:20:15', bot: 'Ethereum Grid', pair: 'ETH/USDT', type: 'Compra', amount: 'R$ 800', result: 'Em aberto', status: 'pending' },
+            { time: '14:15:42', bot: 'Forex Trend', pair: 'EUR/USD', type: 'Compra', amount: 'R$ 500', result: '-R$ 12,00', status: 'completed' }
+        ];
+
+        const historyData = [
+            { date: '10/03/2026 14:32', bot: 'Bitcoin Scalper Pro', asset: 'BTC/USDT', direction: 'Long', entry: 'R$ 67.450', exit: 'R$ 67.890', result: '+R$ 440', resultClass: 'text-green-600' },
+            { date: '10/03/2026 14:15', bot: 'Ethereum Grid', asset: 'ETH/USDT', direction: 'Short', entry: 'R$ 3.520', exit: 'R$ 3.480', result: '+R$ 40', resultClass: 'text-green-600' },
+            { date: '10/03/2026 13:58', bot: 'Forex Trend', asset: 'EUR/USD', direction: 'Long', entry: '1.0850', exit: '1.0842', result: '-R$ 80', resultClass: 'text-red-600' },
+            { date: '10/03/2026 13:42', bot: 'Bitcoin Scalper Pro', asset: 'BTC/USDT', direction: 'Short', entry: 'R$ 67.800', exit: 'R$ 67.200', result: '+R$ 600', resultClass: 'text-green-600' },
+            { date: '10/03/2026 13:20', bot: 'Ethereum Grid', asset: 'ETH/USDT', direction: 'Long', entry: 'R$ 3.450', exit: 'R$ 3.520', result: '+R$ 70', resultClass: 'text-green-600' }
+        ];
+
+        const tradingPairs = [
+            { pair: 'BTC/USDT', price: 'R$ 67.890', change: '+2.4%', icon: 'fab fa-bitcoin', color: 'text-orange-500' },
+            { pair: 'ETH/USDT', price: 'R$ 3.520', change: '+1.8%', icon: 'fab fa-ethereum', color: 'text-purple-500' },
+            { pair: 'SOL/USDT', price: 'R$ 145,20', change: '+5.2%', icon: 'fas fa-sun', color: 'text-blue-500' },
+            { pair: 'ADA/USDT', price: 'R$ 2,85', change: '-0.5%', icon: 'fas fa-layer-group', color: 'text-indigo-500' },
+            { pair: 'DOT/USDT', price: 'R$ 28,40', change: '+3.1%', icon: 'fas fa-dot-circle', color: 'text-pink-500' },
+            { pair: 'MATIC/USDT', price: 'R$ 4,20', change: '+4.5%', icon: 'fas fa-shapes', color: 'text-purple-600' }
+        ];
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            renderBots();
+            renderOperations();
+            renderHistory();
+            renderTradingPairs();
+            initCharts();
+            startRealTimeUpdates();
+        });
+
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('main > section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-800');
+            });
+            
+            event.currentTarget.classList.add('bg-indigo-800');
+        }
+
+        function renderBots() {
+            const grid = document.getElementById('botsGrid');
+            grid.innerHTML = bots.map(bot => `
+                <div class="bot-card bg-white rounded-xl shadow-md p-6 border-t-4 border-${bot.status === 'active' ? 'green' : 'yellow'}-500">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-${bot.color}-100 rounded-xl flex items-center justify-center">
+                                <i class="${bot.icon} text-${bot.color}-600 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg">${bot.name}</h3>
+                                <p class="text-sm text-gray-500 trading-pair">${bot.pair}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <div class="w-2 h-2 ${bot.status === 'active' ? 'bg-green-500 pulse-dot' : 'bg-yellow-500'} rounded-full"></div>
+                            <span class="text-xs ${bot.status === 'active' ? 'text-green-600' : 'text-yellow-600'} font-semibold">
+                                ${bot.status === 'active' ? 'ATIVO' : 'PAUSADO'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-xs text-gray-500">Lucro Total</p>
+                            <p class="font-bold ${bot.profitClass} text-lg">${bot.profit}</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-xs text-gray-500">Taxa de Acerto</p>
+                            <p class="font-bold text-gray-800 text-lg">${bot.winRate}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-sm text-gray-500 mb-4">
+                        <span><i class="fas fa-cog mr-1"></i>${bot.strategy}</span>
+                        <span><i class="fas fa-exchange-alt mr-1"></i>${bot.operations} ops</span>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="toggleBot(${bot.id})" class="flex-1 ${bot.status === 'active' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'} text-white py-2 rounded-lg transition font-semibold">
+                            ${bot.status === 'active' ? 'Pausar' : 'Iniciar'}
+                        </button>
+                        <button class="px-3 py-2 border rounded-lg hover:bg-gray-50 text-gray-600">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderOperations() {
+            const tbody = document.getElementById('operationsTable');
+            tbody.innerHTML = operations.map(op => `
+                <tr class="border-b hover:bg-gray-50 transition">
+                    <td class="p-3 text-gray-600">${op.time}</td>
+                    <td class="p-3 font-medium">${op.bot}</td>
+                    <td class="p-3 trading-pair text-indigo-600">${op.pair}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${op.type === 'Compra' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                            ${op.type}
+                        </span>
+                    </td>
+                    <td class="p-3 text-right font-medium">${op.amount}</td>
+                    <td class="p-3 text-right ${op.result.includes('+') ? 'text-green-600' : op.result.includes('-') ? 'text-red-600' : 'text-gray-600'} font-semibold">
+                        ${op.result}
+                    </td>
+                    <td class="p-3 text-center">
+                        <span class="w-2 h-2 rounded-full inline-block ${op.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500 pulse-dot'}"></span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderHistory() {
+            const tbody = document.getElementById('historyTable');
+            tbody.innerHTML = historyData.map(h => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4 text-gray-600">${h.date}</td>
+                    <td class="p-4 font-medium">${h.bot}</td>
+                    <td class="p-4 trading-pair text-indigo-600">${h.asset}</td>
+                    <td class="p-4 text-center">
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold ${h.direction === 'Long' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                            ${h.direction}
+                        </span>
+                    </td>
+                    <td class="p-4 text-right font-medium">${h.entry}</td>
+                    <td class="p-4 text-right font-medium">${h.exit}</td>
+                    <td class="p-4 text-right ${h.resultClass} font-bold">${h.result}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderTradingPairs() {
+            const container = document.getElementById('tradingPairs');
+            container.innerHTML = tradingPairs.map(pair => `
+                <div class="bg-gray-50 rounded-lg p-4 hover:shadow-md transition cursor-pointer border-2 border-transparent hover:border-indigo-300">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <i class="${pair.icon} ${pair.color} text-xl"></i>
+                        <span class="font-bold trading-pair">${pair.pair}</span>
+                    </div>
+                    <div class="text-lg font-bold text-gray-800">${pair.price}</div>
+                    <div class="text-sm ${pair.change.includes('+') ? 'text-green-600' : 'text-red-600'}">
+                        ${pair.change} hoje
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function initCharts() {
+            // Performance Chart
+            const ctx1 = document.getElementById('performanceChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                    datasets: [{
+                        label: 'Bitcoin Scalper Pro',
+                        data: [1200, 1350, 1100, 1580, 1720, 1890, 2050],
+                        borderColor: 'rgb(99, 102, 241)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Ethereum Grid',
+                        data: [800, 920, 890, 1050, 1180, 1250, 1320],
+                        borderColor: 'rgb(16, 185, 129)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R$ ' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Allocation Chart
+            const ctx2 = document.getElementById('allocationChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Criptomoedas', 'Forex', 'Ações'],
+                    datasets: [{
+                        data: [65, 25, 10],
+                        backgroundColor: [
+                            'rgb(99, 102, 241)',
+                            'rgb(16, 185, 129)',
+                            'rgb(245, 158, 11)'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createNewBot() {
+            document.getElementById('newBotModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('newBotModal').classList.add('hidden');
+        }
+
+        function confirmCreateBot() {
+            const newBot = {
+                id: bots.length + 1,
+                name: 'Novo Robô ' + (bots.length + 1),
+                pair: 'BTC/USDT',
+                strategy: 'Scalping',
+                status: 'active',
+                profit: 'R$ 0,00',
+                profitClass: 'text-gray-600',
+                operations: 0,
+                winRate: '0%',
+                icon: 'fas fa-robot',
+                color: 'indigo'
+            };
+            bots.push(newBot);
+            renderBots();
+            closeModal();
+            
+            // Show success notification
+            showNotification('Robô criado e ativado com sucesso!', 'success');
+        }
+
+        function toggleBot(botId) {
+            const bot = bots.find(b => b.id === botId);
+            if (bot) {
+                bot.status = bot.status === 'active' ? 'paused' : 'active';
+                renderBots();
+                showNotification(`Robô ${bot.name} ${bot.status === 'active' ? 'ativado' : 'pausado'}`, bot.status === 'active' ? 'success' : 'warning');
+            }
+        }
+
+        function quickStart() {
+            showNotification('Iniciando todos os robôs em modo otimizado...', 'success');
+            bots.forEach(bot => bot.status = 'active');
+            renderBots();
+        }
+
+        function selectMarket(market) {
+            showNotification(`Mercado ${market.toUpperCase()} selecionado`, 'success');
+        }
+
+        function activateStrategy(strategy) {
+            showNotification(`Estratégia ${strategy} ativada nos robôs selecionados`, 'success');
+        }
+
+        function updateRiskValue(value) {
+            document.getElementById('riskValue').textContent = value + '%';
+        }
+
+        function showNotification(message, type = 'info') {
+            // Simple notification implementation
+            const div = document.createElement('div');
+            div.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 slide-in ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'warning' ? 'bg-yellow-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            } text-white font-semibold`;
+            div.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check' : 'fa-info-circle'} mr-2"></i>${message}`;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        function startRealTimeUpdates() {
+            // Simulate real-time updates
+            setInterval(() => {
+                // Update last sync time
+                const now = new Date();
+                document.getElementById('lastSync').textContent = now.toLocaleTimeString('pt-BR');
+                
+                // Randomly update prices
+                tradingPairs.forEach(pair => {
+                    const change = (Math.random() - 0.5) * 0.5;
+                    const currentPrice = parseFloat(pair.price.replace(/[^\d,]/g, '').replace(',', '.'));
+                    const newPrice = currentPrice * (1 + change/100);
+                    pair.price = 'R$ ' + newPrice.toFixed(pair.pair.includes('BTC') ? 0 : 2);
+                });
+                renderTradingPairs();
+                
+                // Occasionally add new operation
+                if (Math.random() > 0.7) {
+                    const newOp = {
+                        time: now.toLocaleTimeString('pt-BR'),
+                        bot: bots[Math.floor(Math.random() * bots.length)].name,
+                        pair: tradingPairs[Math.floor(Math.random() * tradingPairs.length)].pair,
+                        type: Math.random() > 0.5 ? 'Compra' : 'Venda',
+                        amount: 'R$ ' + (Math.random() * 1000 + 500).toFixed(2),
+                        result: Math.random() > 0.3 ? '+R$ ' + (Math.random() * 50).toFixed(2) : '-R$ ' + (Math.random() * 20).toFixed(2),
+                        status: 'completed'
+                    };
+                    operations.unshift(newOp);
+                    if (operations.length > 5) operations.pop();
+                    renderOperations();
+                }
+            }, 5000);
+        }
+
+        // Close modal on outside click
+        document.getElementById('newBotModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+</body>
+</html>
